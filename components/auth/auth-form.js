@@ -1,10 +1,12 @@
 import { useRef, useState } from "react";
 import classes from "./auth-form.module.css";
+import { signIn } from "next-auth/client";
+import { useRouter } from "next/router";
 
 const createUser = async (email, password) => {
   const res = await fetch("/api/auth/signup", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email: email, password: password }),
     headers: {
       "Content-Type": "application/json",
     },
@@ -22,26 +24,41 @@ function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
   const emailRef = useRef();
   const passwordRef = useRef();
+  const router = useRouter();
 
   function switchAuthModeHandler() {
     setIsLogin((prevState) => !prevState);
   }
 
-  const submitEventHandler = (event) => {
+  const submitEventHandler = async (event) => {
     event.preventDefault();
     const enteredEmail = emailRef.current.value;
     const enteredPassword = passwordRef.current.value;
 
     if (isLogin) {
+      const result = await signIn("credentials", {
+        redirect: false,
+        email: enteredEmail,
+        password: enteredPassword,
+      });
+      console.log(result);
+      if (!result.error) {
+        router.replace("/profile");
+      }
     } else {
-      const user = createUser(enteredEmail, enteredPassword);
+      try {
+        const user = await createUser(enteredEmail, enteredPassword);
+        console.log(user);
+      } catch (error) {
+        console.log(error);
+      }
     }
   };
 
   return (
     <section className={classes.auth}>
       <h1>{isLogin ? "Login" : "Sign Up"}</h1>
-      <form>
+      <form onSubmit={submitEventHandler}>
         <div className={classes.control}>
           <label htmlFor="email">Your Email</label>
           <input type="email" id="email" required ref={emailRef} />
